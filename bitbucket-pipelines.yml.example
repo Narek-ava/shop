@@ -1,0 +1,36 @@
+# Template PHP Build
+
+# This template allows you to validate your PHP application.
+# The workflow allows running tests and code linting on the default branch.
+
+image: composer:2.5
+
+pipelines:
+  branches:
+    master:
+      - step:
+          name: Build
+          script:
+            - docker-php-ext-install exif
+            - composer update --no-dev
+            - composer install --no-dev
+          caches:
+            - composer
+      - step:
+          name: "Deploy to aws"
+          deployment: production
+          script:
+            - cp .env.dev .env
+            - zip -r deploy.zip . -x "ve  ndor/*"
+            - pipe: atlassian/aws-elasticbeanstalk-deploy:1.1.0
+              variables:
+                AWS_ACCESS_KEY_ID: 'AKIA2KEJGHDOSROYTJFN'
+                AWS_SECRET_ACCESS_KEY: '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'
+                AWS_DEFAULT_REGION: 'eu-central-1'
+                AWS_OIDC_ROLE_ARN: "arn:aws:iam::708957321437:user/deploy"
+                APPLICATION_NAME: 'shop'
+                ENVIRONMENT_NAME: 'shop-env'
+                ZIP_FILE: 'deploy.zip'
+                VERSION_LABEL: shop_${BITBUCKET_COMMIT:0:8}
+                S3_BUCKET: 'shop-elasticbeanstalk-deployment'
+                LOCAL_PATH: $BITBUCKET_CLONE_DIR
